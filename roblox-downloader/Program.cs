@@ -92,47 +92,11 @@ string[] urls =
         { "studiocontent-textures.zip", "StudioContent/textures/" }
     };
 
-string[][] RCC = {
-    new string[] { 
+string[] RCC = { 
         "RCC-Roblox22D1E478981C0E216194483993F0D3B4.exe",
-        "RCCService5EF3896D702123CA38B3ACF2FBB4EB78.zip",
-        "RCC-redistB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-LibrariesB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-shadersB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-contentB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-platformcontentB1C42DC209E175BF4E98DBB3C1E056CF8.zip"
-    },
-    new string[] {
         "RCC-Roblox7a50c7a9033709b969e4586a497b888a.exe",
-        "RCCService03683f72d1cbb3f87434ffca5afd5db2.zip",
-        "RCC-redistB1C42DC209E175BF4E98DBB3C1E056CF8.zip", // it looks like they didint change the content hash here, lmao
-        "RCC-LibrariesB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-shadersB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-sslB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-contentB1C42DC209E175BF4E98DBB3C1E056CF8.zip",
-        "RCC-platformcontentB1C42DC209E175BF4E98DBB3C1E056CF8.zip"
-    },
-    new string[] {
         "RCC-RobloxA5XGEOZ35LAFQUL2.exe",
-        "RCCServiceR7Z9CYTW7WBR95VW.zip",
-        "RCC-redistXGTFDE2U040VW06D.zip",
-        "RCC-LibrariesXGTFDE2U040VW06D.zip",
-        "RCC-shadersXGTFDE2U040VW06D.zip",
-        "RCC-contentXGTFDE2U040VW06D.zip",
-        "RCC-sslXGTFDE2U040VW06D.zip",
-        "RCC-extracontentXGTFDE2U040VW06D.zip",
-        "RCC-platformcontentXGTFDE2U040VW06D.zip"
-    },
-
-    new string[] { // the oldest one we have, after the production wipe we havent had any other hashes that use this
         "RCC-RobloxAB1FEC8F0BB9C736E1454364EA6D7D38.exe",
-        "RCCService2AFBA34ACD542E96B3890871CBA18F43.zip",
-        "RCC-redistC134558C4C663041855C887179E44491.zip",
-        "RCC-LibrariesC134558C4C663041855C887179E44491.zip",
-        "RCC-shadersC134558C4C663041855C887179E44491.zip",
-        "RCC-contentC134558C4C663041855C887179E44491.zip",
-        "RCC-platformcontentC134558C4C663041855C887179E44491.zip"
-    }
 };
 
 Console.WriteLine("Roblox version downloader, made by icscata");
@@ -173,7 +137,7 @@ switch (clientType.ToLower())
         break;
 }
 
-async Task<int> GetRCCService(string[][] RCC, string url)
+async Task<int> GetRCCService(string[] RCC, string url)
 {
     string appSettings = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<Settings>\r\n\t<ContentFolder>content</ContentFolder>\r\n\t<BaseUrl>http://www.roblox.com</BaseUrl>\r\n</Settings>\r\n";
     Console.WriteLine("Enter version-hash: ");
@@ -184,35 +148,64 @@ async Task<int> GetRCCService(string[][] RCC, string url)
         return await GetRCCService(RCC, url);
     }
     HttpClient client = new HttpClient();
+    string stringsExe = @"strings.exe";
+    if (!File.Exists(stringsExe))
+    {
+        await DownloadFileTaskAsync(client, $"https://live.sysinternals.com/strings.exe", $"strings.exe");
+    }
     int i;
     bool found = false;
+    Console.WriteLine("Creating folder for downloading..");
+    System.IO.Directory.CreateDirectory(versionHash);
+    string[] lines = [];
     for (i=0; i < RCC.Length; i++)
     {
-        Console.WriteLine($"Trying {url}{versionHash}-{RCC[i][0]}...");
-        HttpResponseMessage response = await client.GetAsync($"{url}{versionHash}-{RCC[i][0]}");
-        if (response.StatusCode != System.Net.HttpStatusCode.Forbidden)
+        Console.WriteLine($"Trying {url}{versionHash}-{RCC[i]}...");
+        try
         {
+            await DownloadFileTaskAsync(client, $"{url}{versionHash}-{RCC[i]}", $"{versionHash}/{RCC[i]}");
+            Console.WriteLine($"Found Hash!");
             found = true;
-            Console.WriteLine("Found Hash!");
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = stringsExe,
+                Arguments = $"-u \"{versionHash}/{RCC[i]}\"",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            using var process = Process.Start(psi);
+            if (process == null)
+            { return 1; }
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            lines = output.Split(
+                new[] { "\r\n", "\r", "\n" },
+                StringSplitOptions.None);
             break;
-        }
+        } catch (Exception) { }
     }
+
     if (!found)
     {
         Console.WriteLine("No hash found, quitting");
+        System.IO.Directory.Delete(versionHash);
         return 1;
     }
-    Console.WriteLine("Creating folder for downloading..");
-    System.IO.Directory.CreateDirectory(versionHash);
-    for (int j = 0; j < RCC[i].Length; j++)
+
+    var fileNames = lines
+               .Where(line => line.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+               .ToList();
+    foreach (var name in fileNames)
     {
         try {
-            Console.WriteLine($"Downloading {versionHash}-{RCC[i][j]}");
-            await DownloadFileTaskAsync(client, $"{url}{versionHash}-{RCC[i][j]}", $"{versionHash}/{RCC[i][j]}");
-            if (j == 0) continue;
-            Console.WriteLine($"Extracting {versionHash}-{RCC[i][j]}");
-            System.IO.Compression.ZipFile.ExtractToDirectory($"{versionHash}/{RCC[i][j]}", $"{versionHash}");
-            File.Delete($"{versionHash}/{RCC[i][j]}");
+            Console.WriteLine($"Downloading {versionHash}-{name}");
+            await DownloadFileTaskAsync(client, $"{url}{versionHash}-{name}", $"{versionHash}/{name}");
+            Console.WriteLine($"Extracting {versionHash}-{name}");
+            System.IO.Compression.ZipFile.ExtractToDirectory($"{versionHash}/{name}", $"{versionHash}");
+            File.Delete($"{versionHash}/{name}");
         }
         catch (Exception e) {
             Console.WriteLine($"{e.Message}, if 403 do not wory, some assets may not be available");
@@ -303,10 +296,7 @@ async Task<int> GetApp(Dictionary<string, string> App, string url, string type)
         };
         using var process = Process.Start(psi);
         if (process == null)
-        {
-            Console.WriteLine("ERROR: Please put strings.exe in the same directory as the exe");
-            return 1;
-        }
+        { return 0; }
         string output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         lines = output.Split(
