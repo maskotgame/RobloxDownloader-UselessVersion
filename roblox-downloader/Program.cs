@@ -171,7 +171,7 @@ async Task<int> GetRCCService(string[] RCC, string url)
             var psi = new ProcessStartInfo
             {
                 FileName = stringsExe,
-                Arguments = $"-u \"{versionHash}/{RCC[i]}\"",
+                Arguments = $"-accepteula -u \"{versionHash}/{RCC[i]}\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -290,7 +290,7 @@ async Task<int> GetApp(Dictionary<string, string> App, string url, string type)
         var psi = new ProcessStartInfo
         {
             FileName = stringsExe,
-            Arguments = $"-u \"{versionHash}/{bootstrapperName}\"",
+            Arguments = $"-accepteula -u \"{versionHash}/{bootstrapperName}\"",
             RedirectStandardOutput = true,
             UseShellExecute = false,
             CreateNoWindow = true
