@@ -6,6 +6,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Text;
 
 string[] urls =
 {
@@ -204,7 +205,7 @@ async Task<int> GetRCCService(string[] RCC, string url)
             Console.WriteLine($"Downloading {versionHash}-{name}");
             await DownloadFileTaskAsync(client, $"{url}{versionHash}-{name}", $"{versionHash}/{name}");
             Console.WriteLine($"Extracting {versionHash}-{name}");
-            System.IO.Compression.ZipFile.ExtractToDirectory($"{versionHash}/{name}", $"{versionHash}");
+            System.IO.Compression.ZipFileEx.ExtractToDirectory($"{versionHash}/{name}", $"{versionHash}");
             File.Delete($"{versionHash}/{name}");
         }
         catch (Exception e) {
@@ -235,12 +236,12 @@ async Task<int> GetApp(Dictionary<string, string> App, string url, string type)
     {
         url = $"{url}channel/{channel}/";
         //Console.WriteLine(url);
-        HttpResponseMessage response1 = await client.GetAsync($"{url}version");
+        /*HttpResponseMessage response1 = await client.GetAsync($"{url}version");
         if (response1.StatusCode == System.Net.HttpStatusCode.Forbidden)
         {
             Console.WriteLine("Invalid channel provided");
             return await GetApp(App, url, type);
-        }
+        }*/
     }
     HttpResponseMessage response = await client.GetAsync($"{url}{versionHash}-rbxPkgManifest.txt");
     bool hasPkg = true;
@@ -334,7 +335,7 @@ async Task<int> GetApp(Dictionary<string, string> App, string url, string type)
                 location = $"{versionHash}/";
             }
         }
-        System.IO.Compression.ZipFile.ExtractToDirectory($"{versionHash}/{name}", location);
+        System.IO.Compression.ZipFileEx.ExtractToDirectory($"{versionHash}/{name}", location);
         File.Delete($"{versionHash}/{name}");
     }
     var fileexe = lines
@@ -373,6 +374,63 @@ async Task DownloadFileTaskAsync(HttpClient client, string uri, string FileName)
         using (var fs = new FileStream(FileName, FileMode.CreateNew))
         {
             await s.CopyToAsync(fs);
+        }
+    }
+}
+
+//thanks stackoverflow guy
+namespace System.IO.Compression
+{
+    public static class ZipFileEx
+    {
+        public static void ExtractToDirectory(string sourceArchiveFileName, string destinationDirectoryName) =>
+        ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName, entryNameEncoding: null, overwriteFiles: false);
+
+        public static void ExtractToDirectory(string sourceArchiveFileName, string destinationDirectoryName, bool overwriteFiles) =>
+            ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName, entryNameEncoding: null, overwriteFiles: overwriteFiles);
+
+        public static void ExtractToDirectory(string sourceArchiveFileName, string destinationDirectoryName, Encoding? entryNameEncoding) =>
+            ExtractToDirectory(sourceArchiveFileName, destinationDirectoryName, entryNameEncoding: entryNameEncoding, overwriteFiles: false);
+
+        public static void ExtractToDirectory(string sourceArchiveFileName, string destinationDirectoryName, Encoding? entryNameEncoding, bool overwriteFiles)
+        {
+            ArgumentNullException.ThrowIfNull(sourceArchiveFileName);
+            ArgumentNullException.ThrowIfNull(destinationDirectoryName);
+
+            using ZipArchive archive = ZipFile.Open(sourceArchiveFileName, ZipArchiveMode.Read, entryNameEncoding);
+
+            foreach (ZipArchiveEntry entry in archive.Entries)
+            {
+                DirectoryInfo di = Directory.CreateDirectory(destinationDirectoryName);
+                string destinationDirectoryFullPath = di.FullName;
+                if (!destinationDirectoryFullPath.EndsWith(Path.DirectorySeparatorChar))
+                {
+                    char sep = Path.DirectorySeparatorChar;
+                    destinationDirectoryFullPath = string.Concat(destinationDirectoryFullPath, new ReadOnlySpan<char>(in sep));
+                }
+
+                string entryFullName = entry.FullName;
+                if (entryFullName.Length > 0 && entryFullName[0] == '\\') entryFullName = entryFullName[1..]; // remove leading root
+
+                string fileDestinationPath = Path.GetFullPath(Path.Combine(destinationDirectoryFullPath, entryFullName.Replace('\0', '_')));
+
+                var IsCaseSensitive = !(OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsIOS() || OperatingSystem.IsTvOS() || OperatingSystem.IsWatchOS());
+                var stringComparison = IsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
+                if (!fileDestinationPath.StartsWith(destinationDirectoryFullPath, stringComparison)) Console.WriteLine(@"Extracting Zip entry would have resulted in a file outside the specified destination directory.");
+
+                if (Path.GetFileName(fileDestinationPath).Length == 0)
+                {
+                    if (entry.Length != 0) throw new IOException(@"Zip entry name ends in directory separator character but contains data.");
+                    Directory.CreateDirectory(fileDestinationPath);
+
+                }
+                else
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(fileDestinationPath)!);
+                    entry.ExtractToFile(fileDestinationPath, overwrite: overwriteFiles);
+                }
+            }
         }
     }
 }
