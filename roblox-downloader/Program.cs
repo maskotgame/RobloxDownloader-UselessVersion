@@ -11,7 +11,15 @@ using System.Text;
 string[] urls =
 {
     "https://setup.rbxcdn.com/",
-    "https://s3.amazonaws.com/setup.gametest2.robloxlabs.com/"
+    "https://s3.amazonaws.com/setup.gametest1.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.gametest2.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.gametest3.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.gametest4.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.gametest5.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.sitetest1.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.sitetest2.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.sitetest3.robloxlabs.com/",
+    "https://s3.amazonaws.com/setup.sitetest4.robloxlabs.com/",
 };
 
  Dictionary<string, string> Player = new Dictionary<string, string>
@@ -100,8 +108,9 @@ string[] RCC = {
         "RCC-RobloxAB1FEC8F0BB9C736E1454364EA6D7D38.exe",
 };
 
-Console.WriteLine("Roblox version downloader, made by icscata");
-Console.WriteLine("Please enter source (prod, gt2): ");
+Console.WriteLine("Roblox HOPIUM version downloader, made by icscata, forked lazily by Vand");
+Console.WriteLine("(most likely only gt2 will work but JUUUUST IN CASE...)");
+Console.WriteLine("Please enter source (prod, gt1 - gt5, st1 - st4): ");
 string urlChoice = Console.ReadLine()!;
 
 string url;
@@ -111,8 +120,32 @@ switch (urlChoice.ToLower())
     case "prod":
         url = urls[0];
         break;
-    case "gt2":
+    case "gt1":
         url = urls[1];
+        break;
+    case "gt2":
+        url = urls[2];
+        break;
+    case "gt3":
+        url = urls[3];
+        break;
+    case "gt4":
+        url = urls[4];
+        break;
+    case "gt5":
+        url = urls[5];
+        break;
+    case "st1":
+        url = urls[6];
+        break;
+    case "st2":
+        url = urls[7];
+        break;
+    case "st3":
+        url = urls[8];
+        break;
+    case "st4":
+        url = urls[9];
         break;
     default:
         url = urls[0];
